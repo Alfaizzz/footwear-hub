@@ -17,7 +17,7 @@ export interface Product {
   new?: boolean;
 }
 
-export const mockProducts: Product[] = [
+export let mockProducts: Product[] = [
   {
     id: '1',
     name: 'Air Max Velocity',
@@ -260,7 +260,7 @@ export const mockProducts: Product[] = [
 
 export const getProducts = (): Promise<Product[]> => {
   return new Promise((resolve) => {
-    setTimeout(() => resolve(mockProducts), 500);
+    setTimeout(() => resolve([...mockProducts]), 500); // return copy
   });
 };
 
@@ -294,5 +294,44 @@ export const getNewArrivals = (): Promise<Product[]> => {
       const newItems = mockProducts.filter((p) => p.new);
       resolve(newItems);
     }, 400);
+  });
+};
+
+export const addProduct = (product: Omit<Product, 'id'>): Promise<Product> => {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      const newProduct: Product = {
+        ...product,
+        id: Date.now().toString(), // simple unique ID
+        rating: 4.5,
+        reviews: 0,
+      };
+      mockProducts.push(newProduct);
+      resolve(newProduct);
+    }, 500);
+  });
+};
+
+export const updateProduct = (id: string, updates: Partial<Product>): Promise<Product> => {
+  return new Promise((resolve, reject) => {
+    setTimeout(() => {
+      const index = mockProducts.findIndex((p) => p.id === id);
+      if (index === -1) return reject(new Error('Product not found'));
+
+      mockProducts[index] = { ...mockProducts[index], ...updates };
+      resolve(mockProducts[index]);
+    }, 500);
+  });
+};
+
+export const deleteProduct = (id: string): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    setTimeout(() => {
+      const index = mockProducts.findIndex((p) => p.id === id);
+      if (index === -1) return reject(new Error('Product not found'));
+
+      mockProducts.splice(index, 1);
+      resolve();
+    }, 500);
   });
 };
