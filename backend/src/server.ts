@@ -1,56 +1,81 @@
-// backend/src/server.ts
-import express from 'express';
-import mongoose from 'mongoose';
-import dotenv from 'dotenv';
-import cors from 'cors';
-import swaggerUi from 'swagger-ui-express';
-import { swaggerSpec } from './swagger'; // Make sure this file exists
+console.log("🔥 SERVER.TS FILE EXECUTED");
 
-import productRoutes from './routes/productRoutes';
-import userRoutes from './routes/userRoutes';
-import orderRoutes from './routes/orderRoutes';
-import settingRoutes from './routes/settingRoutes';
+import express, { Application } from "express";
+import mongoose from "mongoose";
+import dotenv from "dotenv";
+import cors from "cors";
+import swaggerUi from "swagger-ui-express";
+import swaggerSpec from "./config/swagger";
 
-dotenv.config(); // Loads .env file
+// Routes
+import productRoutes from "./routes/productRoutes";
+import userRoutes from "./routes/userRoutes";
+import orderRoutes from "./routes/orderRoutes";
+import settingRoutes from "./routes/settingRoutes";
 
-const app = express();
+// ---------- ENV ----------
+dotenv.config();
 
-app.use(cors({
-  origin: 'http://localhost:5173', // Your Vite frontend port
-  credentials: true,
-}));
+// ---------- App Init ----------
+const app: Application = express();
+
+// ---------- Middlewares ----------
+app.use(
+  cors({
+    origin: process.env.CLIENT_URL || "http://localhost:5173",
+    credentials: true,
+  })
+);
+
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// Swagger UI route - must be early
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+// ---------- Swagger ----------
+if (process.env.NODE_ENV !== "production") {
+  app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+}
 
-// API routes
-app.use('/api/products', productRoutes);
-app.use('/api/auth', userRoutes);
-app.use('/api/orders', orderRoutes);
-app.use('/api/settings', settingRoutes);
+// ---------- Routes ----------
+app.use("/api/products", productRoutes);
+app.use("/api/auth", userRoutes);
+app.use("/api/orders", orderRoutes);
+app.use("/api/settings", settingRoutes);
 
-// Test route
-app.get('/', (req, res) => {
-  res.send('Backend is running! Visit /api-docs for Swagger');
+// ---------- Health Check ----------
+app.get("/", (_req, res) => {
+  res.status(200).send("✅ Backend is running! Visit /api-docs for Swagger");
 });
 
-// MongoDB connection with better error handling
-if (!process.env.MONGO_URI) {
-  console.error('ERROR: MONGO_URI not defined in .env file');
+// ---------- Config ----------
+const PORT = Number(process.env.PORT) || 5000;
+const MONGO_URI = process.env.MONGO_URI;
+
+// ---------- DB & Server ----------
+if (!MONGO_URI) {
+  console.error("❌ MONGO_URI not defined in .env file");
   process.exit(1);
 }
 
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log('MongoDB connected successfully'))
-  .catch((err) => {
-    console.error('MongoDB connection error:', err);
-    process.exit(1); // Exit if DB fails
+mongoose
+  .connect(MONGO_URI)
+  .then(() => {
+    console.log("✅ MongoDB connected successfully");
+
+    app.listen(PORT, () => {
+      console.log(`🚀 Server running on http://localhost:${PORT}`);
+      if (process.env.NODE_ENV !== "production") {
+        console.log(`📘 Swagger UI → http://localhost:${PORT}/api-docs`);
+      }
+    });
+  })
+  .catch((error: Error) => {
+    console.error("❌ MongoDB connection failed:", error.message);
+    process.exit(1);
   });
 
-// Start server - THIS KEEPS THE PROCESS ALIVE
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-  console.log(`Swagger UI: http://localhost:${PORT}/api-docs`);
+// ---------- Graceful Shutdown ----------
+process.on("SIGINT", async () => {
+  console.log("🛑 Server shutting down...");
+  await mongoose.connection.close();
+  process.exit(0);
 });

@@ -1,33 +1,42 @@
-import { Schema, model, Document } from 'mongoose';
+import mongoose, { Schema, Document } from "mongoose";
 
 export interface IOrderItem {
-  product: Schema.Types.ObjectId;
+  product: mongoose.Types.ObjectId;
   quantity: number;
   price: number;
-  size: number;
-  color: string;
+  color?: string;
+  size?: string;
 }
 
 export interface IOrder extends Document {
-  user: Schema.Types.ObjectId;
+  user: mongoose.Types.ObjectId;
   items: IOrderItem[];
   total: number;
-  status: 'pending' | 'paid' | 'shipped' | 'completed';
-  paymentId?: string;  // From Razorpay
+  status: "created" | "paid" | "failed";
+  paymentId?: string;
+  razorpayOrderId?: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
-const orderSchema = new Schema<IOrder>({
-  user: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-  items: [{
-    product: { type: Schema.Types.ObjectId, ref: 'Product', required: true },
-    quantity: { type: Number, required: true },
-    price: { type: Number, required: true },
-    size: { type: Number, required: true },
-    color: { type: String, required: true },
-  }],
-  total: { type: Number, required: true },
-  status: { type: String, default: 'pending' },
-  paymentId: { type: String },
-}, { timestamps: true });
+const orderItemSchema: Schema<IOrderItem> = new Schema({
+  product: { type: mongoose.Schema.Types.ObjectId, ref: "Product", required: true },
+  quantity: { type: Number, required: true },
+  price: { type: Number, required: true },
+  color: { type: String },
+  size: { type: String },
+});
 
-export default model<IOrder>('Order', orderSchema);
+const orderSchema: Schema<IOrder> = new Schema(
+  {
+    user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    items: [orderItemSchema],
+    total: { type: Number, required: true },
+    status: { type: String, enum: ["created", "paid", "failed"], default: "created" },
+    paymentId: { type: String },
+    razorpayOrderId: { type: String },
+  },
+  { timestamps: true }
+);
+
+export default mongoose.model<IOrder>("Order", orderSchema);

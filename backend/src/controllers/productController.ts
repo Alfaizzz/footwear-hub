@@ -13,10 +13,43 @@ export const getProductById = async (req: Request, res: Response) => {
 };
 
 export const addProduct = async (req: Request, res: Response) => {
-  const product = new Product(req.body);
-  await product.save();
-  res.status(201).json(product);
+  try {
+    const {
+      name,
+      price,
+      description,
+      brand,
+      gender,
+      category,
+      imageUrl,
+      stock
+    } = req.body;
+
+    const product = new Product({
+      name,
+      price,
+      description,
+      brand,
+      gender,
+      category,
+      imageUrl,
+      stock
+    });
+
+    await product.save();
+
+    res.status(201).json({
+      message: 'Product added successfully',
+      product,
+    });
+  } catch (error) {
+    res.status(400).json({
+      message: 'Product creation failed',
+      error,
+    });
+  }
 };
+
 
 export const updateProduct = async (req: Request, res: Response) => {
   const product = await Product.findByIdAndUpdate(req.params.id, req.body, { new: true });
